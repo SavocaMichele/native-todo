@@ -1,0 +1,81 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="index.css">
+    <script src="assets/js/lib/jquery-4.0.0.min.js"></script>
+
+    <title>JavaScript To-Do Board</title>
+</head>
+<body>
+
+    <main>
+        <section class="flex flex-justify-space-between flex-align-center">
+            <div class="flex flex-column flex-gap-sm">
+                <h1>Native To-Do Board</h1>
+                <p class="light">A JavaScript Kanban-Style To-Do Board</p>
+            </div>
+
+            <button id="todo-init">Add To-Do</button>
+        </section>
+
+        <section class="todo-board" id="todo-board">
+            <div class="todo-column" data-status="todo">
+                <div class="title">
+                    <div class="flex flex-align-center flex-gap-md">
+                        <span class="status todo"></span>
+                        <h4>To-Do</h4>
+                    </div>
+
+                    <div class="count">0</div>
+                </div>
+                <div class="content"></div>
+            </div>
+
+            <div class="todo-column" data-status="in-progress">
+                <div class="title">
+                    <div class="flex flex-align-center flex-gap-md">
+                        <span class="status in-progress"></span>
+                        <h4>In Progress</h4>
+                    </div>
+
+                    <div class="count">0</div>
+                </div>
+                <div class="content"></div>
+            </div>
+
+            <div class="todo-column" data-status="done">
+                <div class="title">
+                    <div class="flex flex-align-center flex-gap-md">
+                        <span class="status done"></span>
+                        <h4>Done</h4>
+                    </div>
+
+                    <div class="count">0</div>
+                </div>
+                <div class="content"></div>
+            </div>
+
+            <div class="todo-column" data-status="archived">
+                <div class="title">
+                    <div class="flex flex-align-center flex-gap-md">
+                        <span class="status archived"></span>
+                        <h4>Archived</h4>
+                    </div>
+
+                    <div class="count">0</div>
+                </div>
+                <div class="content"></div>
+            </div>
+        </section>
+    </main>
+
+
+    <script src="assets/js/lib/select.js"></script>
+    <script src="assets/js/lib/popup.js"></script>
+    <script src="assets/js/lib/todo.js"></script>
+
+    <script src="index.js"></script>
+</body>
+</html>

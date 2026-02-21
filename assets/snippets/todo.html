@@ -1,0 +1,44 @@
+<form action="" id="todo-form">
+    <section class="todo-form-body flex flex-column flex-gap-lg">
+        <input name="title" type="text" value="New To-Do" autofocus required onfocus="this.select()">
+
+        <div class="todo-form-content">
+            <div class="flex flex-column flex-gap-md">
+                <textarea name="content" id="" cols="30" rows="10" maxlength="200" placeholder="To-Do Description..."></textarea>
+            </div>
+
+            <div class="flex flex-column flex-justify-end flex-gap-md">
+
+                <div class="todo-options flex flex-column flex-gap-sm flex-grow-1">
+                    <label for="status" class="flex flex-justify-space-between flex-align-center flex-gap-md">
+                        <span class="light">Status</span>
+                        <select name="status" id="status" data-ignore="true" required>
+                            <option value="todo" selected>To-Do</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="done">Done</option>
+                            <option value="archived">Archived</option>
+                        </select>
+                    </label>
+
+                    <label for="priority" class="flex flex-justify-space-between flex-align-center flex-gap-md">
+                        <span class="light">Priority</span>
+                        <select name="priority" id="priority" data-ignore="true" required>
+                            <option value="low" selected>low</option>
+                            <option value="medium">medium</option>
+                            <option value="high">high</option>
+                        </select>
+                    </label>
+
+                    <label for="deadline" class="flex flex-justify-space-between flex-align-center flex-gap-md">
+                        <span class="light">Deadline</span>
+                        <input type="date" name="deadline" id="deadline">
+                    </label>
+                </div>
+
+                <button type="button" class="secondary button-sm hidden" id="todo-delete">Delete</button>
+                <input type="submit" id="todo-create" value="Create">
+            </div>
+        </div>
+    </section>
+
+</form>
