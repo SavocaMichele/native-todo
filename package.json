@@ -1,0 +1,29 @@
+{
+    "name": "todo",
+    "version": "1.0.0",
+    "description": "A small, native JavaScript Kanban / To-Do board. It was created as an exercise project and uses only web technologies (HTML, CSS, JavaScript) plus a minimal dependency: jQuery (included locally). The project stores tasks in `localStorage` and optionally loads demo data from `assets/data/todos.json`.",
+    "homepage": "https://github.com/SavocaMichele/native-todo#readme",
+    "bugs": {
+        "url": "https://github.com/SavocaMichele/native-todo/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/SavocaMichele/native-todo.git"
+    },
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "main": "server.js",
+    "scripts": {
+        "dev": "nodemon server.js"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "sequelize": "^6.37.7",
+        "sqlite3": "^5.1.7",
+        "cors": "^2.8.6"
+    },
+    "devDependencies": {
+        "nodemon": "^2.0.22"
+    }
+}

@@ -1,15 +1,9 @@
-"use strict";
-
 /**
  * __To-Do Module__
  *
  * This module provides a To-Do management system with
  * methods to create, edit, and retrieve To-Do items.
- * It uses localStorage for persistence and can load
- * initial data from a JSON file.
- *
- * @module todo
- * @author Michele Savoca
+ * It now uses a REST API backed by the server DB instead of localStorage.
  */
 window.todo = (function () {
 
@@ -30,7 +24,6 @@ window.todo = (function () {
         this.content    = content;
         this.status     = status;
         this.priority   = priority;
-        this.createdAt  = new Date().toISOString().slice(0, 10);
         this.deadline   = deadline;
     }
 
@@ -46,6 +39,19 @@ window.todo = (function () {
     }
 
 
+    // Map server object to local To-Do
+    function mapServerTodo(t) {
+        return new Todo({
+            key: t.key,
+            title: t.title,
+            content: t.content,
+            status: t.status,
+            priority: t.priority,
+            deadline: t.deadline || null
+        });
+    }
+
+
     /**
      * Creates a new To-Do and stores it
      *
@@ -56,49 +62,59 @@ window.todo = (function () {
      * @param deadline
      * @returns {Todo}
      */
-    Storage.prototype.create = function (title, content, status = "todo", priority = "low", deadline) {
-        const todo = new Todo({
-            key:        this.nextKey++,
-            title:      title.trim().length > 0 ? title.trim() : "New To-Do",
-            content:    content,
-            status:     status,
-            priority:   priority,
-            deadline:   deadline
+    Storage.prototype.create = async function (title, content, status = "todo", priority = "low", deadline) {
+        const payload = { title, content, status, priority, deadline };
+
+        const res = await fetch('/api/todos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
+        if (!res.ok) throw new Error('Failed to create todo');
+
+        const created       = await res.json();
+        const todo    = mapServerTodo(created);
+
         this.todos.push(todo);
-        this.save();
+        this.nextKey = Math.max(this.nextKey, todo.key + 1);
 
         return todo;
     }
 
 
     /**
-     * Edits an existing To-Do by its key and updates the stored data
+     *  Edits an existing To-Do by sending updates to the server and updating local cache.
      *
      * @param key
      * @param updates
-     * @returns {Todo}
+     * @returns {Promise<any>}
      */
-    Storage.prototype.edit = function (key, updates) {
-        const todo = this.get(key);
+    Storage.prototype.edit = async function (key, updates) {
+        const res = await fetch(`/api/todos/${key}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
 
-        if (!todo) {
-            throw new Error("To-Do not found with key: " + key);
+        if (!res.ok) throw new Error('Failed to edit todo');
+        const updated = await res.json();
+        const todo = this.todos.find(t => t.key === updated.key);
+
+        if (todo) {
+            Object.assign(todo, updated);
+        } else {
+            this.todos.push(mapServerTodo(updated));
         }
 
-        Object.assign(todo, updates);
-        this.save();
-
-        return todo;
+        return updated;
     }
 
 
     /**
      * Gets a To-Do by its key
-     *
      * @param key
-     * @returns {Todo}
+     * @returns {*}
      */
     Storage.prototype.get = function (key) {
         return this.todos.find(todo => todo.key === key);
@@ -107,149 +123,77 @@ window.todo = (function () {
 
     /**
      * Gets all To-Dos
-     *
-     * @return {Todo[]}
-     * */
+     * @returns {*[]}
+     */
     Storage.prototype.getAll = function () {
         return [...this.todos];
     }
 
 
-    /** Saves the current To-Dos to localStorage */
-    Storage.prototype.save = function () {
-        if (!localStorage) {
-            throw new Error("localStorage is not supported.");
-        }
-
-        localStorage.setItem("todos", JSON.stringify(this.todos));
-    }
-
-
-    /** Loads To-Dos from localStorage */
-    Storage.prototype.load = function () {
-        const data      = JSON.parse(localStorage.getItem("todos")) || [];
-
-        this.todos      = data.map(item => new Todo(item));
-        this.nextKey    = this.todos.length ? Math.max(...this.todos.map(t => t.key)) + 1 : 1;
-
-        console.log("%c[To-Do] %cLoaded " + this.todos.length + " To-Dos from storage.", "color: cyan; font-weight: bold;");
-    }
-
-
     /**
-     * Deletes a To-Do by its key and updates the stored data
+     * Delete a To-Do by its key.
      *
      * @param key
+     * @returns {Promise<void>}
      */
-    Storage.prototype.delete = function (key) {
-        const index = this.todos.findIndex(todo => todo.key === key);
+    Storage.prototype.delete = async function (key) {
+        const res = await fetch(`/api/todos/${key}`, { method: 'DELETE' });
+        if (!res.ok && res.status !== 204) throw new Error('Failed to delete todo');
 
-        if (index === -1) {
-            throw new Error("To-Do not found with key: " + key);
-        }
-
-        this.todos.splice(index, 1);
-        this.save();
+        const idx = this.todos.findIndex(t => t.key === key);
+        if (idx !== -1) this.todos.splice(idx, 1);
     }
 
 
     /**
-     * Loads template data from a JSON file and initializes storage if no data is found.
+     * Loads To-Dos from the server and initializes local cache. Calls callback with loaded data.
      *
      * @param callback
+     * @returns {Promise<void>}
      */
-    Storage.prototype.loadTemplateData = function (callback) {
-        // fetch was not allowed in the making of this project
-        jQuery.ajax({
-            url:        "/assets/data/todos.json",
-            method:     "GET",
-            dataType:   "json",
-            success: (data) => {
-                if (!localStorage.getItem("todos")) {
-                    this.todos      = data.map(item => new Todo(item));
-                    this.nextKey    = this.todos.length ? Math.max(...this.todos.map(t => t.key)) + 1 : 1;
+    Storage.prototype.loadTemplateData = async function (callback) {
+        try {
+            const res = await fetch('/api/todos');
+            if (!res.ok) throw new Error('Failed to fetch todos');
 
-                    this.save();
-                }
+            const data = await res.json();
+            this.todos = data.map(mapServerTodo);
 
-                if (callback) callback(data);
-            },
-            error: (jqXHR, textStatus, errorThrown) => {
-                console.error("Failed to load template data:", textStatus, errorThrown);
-                if (callback) callback();
-            }
-        });
+            this.nextKey = this.todos.length ? Math.max(...this.todos.map(t => t.key)) + 1 : 1;
+
+            console.log("%c[To-Do] %cLoaded " + this.todos.length + " To-Dos from server.", "color: cyan; font-weight: bold;");
+
+            if (callback) callback(this.todos);
+        } catch (err) {
+            console.error('Failed to load todos from server:', err);
+
+            this.todos = [];
+            this.nextKey = 1;
+
+            if (callback) callback(this.todos);
+        }
     }
 
-
-    /** Initialize Storage and load existing To-Dos */
     const storage = new Storage();
-    storage.load();
-
 
     return {
-
-        /** Creates a new To-Do
-         *
-         * @param {string} title - The title of the To-Do
-         * @param {string} content - The content/description of the To-Do
-         * @param {"todo" | "in-progress" | "done" | "archived"} status
-         * @param {"low" | "medium" | "high"} priority
-         * @param {string} deadline - The deadline for the To-Do (in YYYY-MM-DD format)
-         * @returns {Todo} The created To-Do
-         */
         create: function (title = "New To-Do", content = "", status = "todo", priority = "low", deadline) {
             return storage.create(title, content, status, priority, deadline);
         },
-
-
-        /** Edits an existing To-Do by its key
-         *
-         * @param {number} key - The key of the To-Do to edit
-         * @param {Object} updates - An object containing the fields to update
-         * @returns {Todo} The updated To-Do
-         */
         edit: function (key, updates) {
             return storage.edit(key, updates);
         },
-
-
-        /** Gets a To-Do by its key
-         *
-         * @param {number} key - The key of the To-Do
-         * @returns {Todo} The To-Do with the given key
-         */
         get: function (key) {
             return storage.get(key);
         },
-
-
-        /** Gets all To-Dos
-         *
-         * @returns {Todo[]} An array of all To-Dos
-         */
         getAll: function () {
             return storage.getAll();
         },
-
-
-        /**
-         * Deletes a To-Do by its key
-         *
-         * @param key
-         */
         delete: function (key) {
-            storage.delete(key);
+            return storage.delete(key);
         },
-
-
-        /**
-         * Loads template data from a JSON file and initializes storage if no data is found.
-         *
-         * @param callback
-         */
         loadTemplateData: function (callback) {
-            storage.loadTemplateData(callback);
+            return storage.loadTemplateData(callback);
         }
 
     }

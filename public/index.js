@@ -14,13 +14,13 @@ function createTodo() {
         renderPopupSelects();
 
         const createBtn = newTodoPopup.element.querySelector("#todo-create");
-        createBtn.addEventListener("click", (e) => {
+        createBtn.addEventListener("click", async (e) => {
             e.preventDefault();
             e.stopPropagation();
 
             const form = new FormData(newTodoPopup.element.querySelector("#todo-form"));
 
-            window.todo.create(
+            await window.todo.create(
                 form.get("title"),
                 form.get("content"),
                 form.get("status") ?? "todo",
@@ -28,6 +28,8 @@ function createTodo() {
                 form.get("deadline")
             );
 
+            // reload data from server
+            await window.todo.loadTemplateData();
             updateBoard(window.todo.getAll());
             newTodoPopup.close();
         });
@@ -75,18 +77,18 @@ function editTodo(key) {
         deadline.value          = todo.deadline ?? "";
 
         deleteBtn.classList.remove("hidden");
-        deleteBtn.addEventListener("click", () => {
+        deleteBtn.addEventListener("click", async () => {
             editTodoPopup.close();
-            deleteTodo(key);
+            await deleteTodo(key);
         });
 
         renderPopupSelects();
 
-        saveBtn.addEventListener("click", (e) => {
+        saveBtn.addEventListener("click", async (e) => {
             e.preventDefault();
             e.stopPropagation();
 
-            window.todo.edit(key, {
+            await window.todo.edit(key, {
                 title:      title.value,
                 content:    content.value,
                 status:     status.value,
@@ -94,6 +96,8 @@ function editTodo(key) {
                 deadline:   deadline.value || null
             });
 
+            // reload data from server
+            await window.todo.loadTemplateData();
             updateBoard(window.todo.getAll());
             editTodoPopup.close();
         });
@@ -106,8 +110,10 @@ function editTodo(key) {
  *
  * @param key
  * */
-function deleteTodo(key) {
-    window.todo.delete(key)
+async function deleteTodo(key) {
+    await window.todo.delete(key)
+    // reload data from server
+    await window.todo.loadTemplateData();
     updateBoard(window.todo.getAll());
 }
 
@@ -254,7 +260,7 @@ function initBoardEvents() {
         e.preventDefault();
     })
 
-    board.addEventListener("drop", (e) => {
+    board.addEventListener("drop", async (e) => {
         const column = e.target.closest(".todo-column .content");
         if (!column) return;
 
@@ -268,8 +274,15 @@ function initBoardEvents() {
         const newStatus = column.closest(".todo-column").dataset.status;
 
         if (TODO_STATUS.includes(newStatus)) {
-            window.todo.edit(todo.key, { status: newStatus });
-            updateBoard(window.todo.getAll());
+            try {
+                // wait for server update
+                await window.todo.edit(todo.key, { status: newStatus });
+                // after server confirms, refresh feed from server
+                await window.todo.loadTemplateData();
+                updateBoard(window.todo.getAll());
+            } catch (err) {
+                console.error('Failed to move To-Do:', err);
+            }
         }
 
         columns.forEach(col => col.classList.remove("drag-over"));
