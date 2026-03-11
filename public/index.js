@@ -57,8 +57,13 @@ function editTodo(key) {
             throw new Error("To-Do not found with key: " + key);
         }
 
-        // Open popup before loading content to ensure elements are available for manipulation
         editTodoPopup.open();
+
+        // Store the key in a data attribute for presence tracking
+        try { editTodoPopup.element.dataset.todoKey = String(key); } catch (e) {}
+
+        // Notify presence module that we're editing this todo
+        try { if (window.presence && window.presence.enterTodo) window.presence.enterTodo(key); } catch (e) {}
 
         const saveBtn   = editTodoPopup.element.querySelector("#todo-create");
         const deleteBtn = editTodoPopup.element.querySelector("#todo-delete");
@@ -78,6 +83,9 @@ function editTodo(key) {
 
         deleteBtn.classList.remove("hidden");
         deleteBtn.addEventListener("click", async () => {
+            // notify presence leave before closing
+            try { if (window.presence && window.presence.leaveTodo) window.presence.leaveTodo(key); } catch (e) {}
+
             editTodoPopup.close();
             await deleteTodo(key);
         });
@@ -95,6 +103,9 @@ function editTodo(key) {
                 priority:   priority.value,
                 deadline:   deadline.value || null
             });
+
+            // notify presence leave after save
+            try { if (window.presence && window.presence.leaveTodo) window.presence.leaveTodo(key); } catch (e) {}
 
             // reload data from server
             await window.todo.loadTemplateData();

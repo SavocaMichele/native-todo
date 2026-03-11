@@ -53,6 +53,35 @@ window.popup = (function () {
 
     /** Closes the popup window and removes it from the DOM */
     Popup.prototype.close = function () {
+        try {
+            const todoKey = this.element && this.element.dataset && this.element.dataset.todoKey ? Number(this.element.dataset.todoKey) : null;
+
+            // Clean up presence
+            try {
+                if (todoKey != null) {
+                    const selector      = `.todo-item[data-key="${todoKey}"]`;
+                    const todoElem    = document.querySelector(selector);
+
+                    if (todoElem) {
+                        todoElem.classList.remove('presence-active');
+
+                        todoElem.style.borderLeft   = '';
+                        todoElem.style.borderColor  = '';
+                    }
+
+                    // Inform presence module to leave this todo (best-effort)
+                    try { if (window.presence && window.presence.leaveTodo) window.presence.leaveTodo(todoKey); } catch (e) {}
+                }
+            } catch (e) {
+                // ignore cleanup errors
+            }
+
+            const ev = new CustomEvent('popup:closed', { detail: { todoKey } });
+            window.dispatchEvent(ev);
+        } catch (e) {
+            console.error(e);
+        }
+
         if (this.element && this.element.parentNode) {
             document.body.removeChild(this.element);
         }
