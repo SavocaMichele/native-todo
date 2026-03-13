@@ -87,8 +87,8 @@
         if (existingBadges) existingBadges.remove();
         elem.classList.remove('presence-active');
 
-        elem.style.borderLeft = '';
-        elem.style.borderColor = '';
+        elem.style.borderLeft   = '';
+        elem.style.borderColor  = '';
 
         if (!users || users.length === 0) return;
 
@@ -177,8 +177,9 @@
             socket.emit('todo:leave', {key});
         },
         join(name, color) {
-            clientMeta.name = name || clientMeta.name;
-            clientMeta.color = color || clientMeta.color;
+            clientMeta.name     = name || clientMeta.name;
+            clientMeta.color    = color || clientMeta.color;
+
             localStorage.setItem('presence:meta', JSON.stringify(clientMeta));
             socket.emit('presence:join', {name: clientMeta.name, color: clientMeta.color});
         },
